@@ -1,0 +1,83 @@
+﻿<Window x:Class="FolderMMYYSorter_2.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FolderMMYYSorter_2" xmlns:viewmodel="clr-namespace:FolderMMYYSorter_2.MVVM.ViewModel"
+        mc:Ignorable="d"
+        Title="MMYY Folder Sorter" Height="474" Width="816">
+
+    <Window.DataContext>
+        <viewmodel:MainViewModel/>
+    </Window.DataContext>
+
+    <Grid Margin="16">
+        <!-- Define three rows: Top (Auto), Middle (*), Bottom (Auto) -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Top row: Button + Text -->
+            <RowDefinition Height="*"/>
+            <!-- Middle row: List -->
+            <RowDefinition Height="Auto"/>
+            <!-- Bottom row: Buttons + Text -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Row: Browse Button + Directory Text -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+            <Button Content="Browse" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
+            <TextBlock Text="{Binding _FileExplorer.CurrentDirectory}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Middle Row: List of Files/Folders -->
+        <ListView Grid.Row="1" 
+              ItemsSource="{Binding _FileExplorer.DispFiles}" 
+              Margin="0,0,0,8">
+            <!-- Optional: Customize item display -->
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Height="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48"/>
+                            <ColumnDefinition Width="230"/>
+                            <ColumnDefinition Width="30*"/>
+                        </Grid.ColumnDefinitions>
+                        <Image Source="{Binding IconName}" Width="20" Height="20" Stretch="Uniform"/>
+                        <TextBlock Grid.Column="1" Text="{Binding name}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding CreationDate}" VerticalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Bottom Row: Sort Button, Empty Button, Result Text -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Content="Sort" Width="80" Margin="0,0,8,0" Command="{Binding SortCommand}"/>
+            <Button Content="Empty" Width="80" Margin="0,0,8,0" Command="{Binding EmptyCommand}"/>
+            <TextBlock Text="{Binding TransformResult}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="3" 
+                   HorizontalAlignment="Stretch" 
+                   VerticalAlignment="Center"
+                   TextWrapping="WrapWithOverflow"
+                   Background="AntiqueWhite" 
+                   Foreground="Navy" 
+                   FontFamily="Century Gothic"
+                   FontSize="12"
+                   FontStretch="UltraExpanded"
+                   FontStyle="Italic"
+                   FontWeight="UltraBold"
+                   Margin="0,10,0,10"
+                   Text="{Binding _FileExplorer.HelpText}"/>
+
+        <Button Grid.Row="4"
+                HorizontalAlignment="Right"
+                Content="Execute"
+                Width="80"
+                Margin="0,0,8,0"
+                Command="{Binding ExecuteCommand}"/>
+    </Grid>
+
+</Window>
