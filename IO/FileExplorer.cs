@@ -10,6 +10,7 @@ using System.Runtime;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Input;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 using Win32 = System.Windows;
 
@@ -40,6 +41,7 @@ namespace FolderMMYYSorter_2.IO
                 {
                     _HelpText = value;
                     OnPropertyChanged(nameof(HelpText)); // triggers the UI update
+                    CommandManager.InvalidateRequerySuggested(); // Force command refresh
 
                 }
             }
@@ -109,7 +111,7 @@ namespace FolderMMYYSorter_2.IO
                 dirPath => new DirFileModel
             {
                 name = System.IO.Path.GetFileName(dirPath),
-                CreationDate = new FileInfo(dirPath).CreationTime,
+                CreationDate = new FileInfo(dirPath).LastWriteTime,
                 isFolder = true,
                 Path = dirPath,
             }).ToList());
@@ -117,11 +119,11 @@ namespace FolderMMYYSorter_2.IO
 
             // list files next
             string[] files = await Task.Run(() => Directory.GetFiles(CurrentDirectory));
-            filesList = await Task.Run(() => files.Select(
+            filesList = await Task.Run(() => files.Select( // considering using EnumerateFiles EnumerateDirectories instead
                 filePath => new DirFileModel
                 {
                     name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).CreationTime,
+                    CreationDate = new FileInfo(filePath).LastWriteTime,
                     isFolder = false,
                     Path = filePath,
                 }).ToList());
@@ -139,6 +141,10 @@ namespace FolderMMYYSorter_2.IO
                 foreach (var file in filesList)
                     DispFiles.Add(file);
             });
+
+            // clear after use to save resources
+            dirsList.Clear();
+            filesList.Clear();
 
         }
 
@@ -165,10 +171,10 @@ namespace FolderMMYYSorter_2.IO
 
         private async Task updateHelpText()
         {
+            HelpText = "Loading....";
             switch (isModeSorting)
             {
                 case true: // Sorting
-                    HelpText = "Loading....";
                     mmYYGroups = await Task.Run(
                         () => DispFiles
                                 .Where(f => !IsValidMMYYFolder(f.name)) // do not sort files that are in MMYY format
@@ -183,14 +189,21 @@ namespace FolderMMYYSorter_2.IO
                     int mmYYFolderCount = 0;
                     int totalItemsInMMYYFolders = 0;
 
-                    foreach (var dir in DispFiles.Where(d => d.isFolder && IsValidMMYYFolder(d.name)))
+                    await Task.Run(() =>
                     {
-                        mmYYFolderCount++;
-                        totalItemsInMMYYFolders += GetDirectoryItemCount(dir.Path);
-                    }
+                        foreach (var dir in DispFiles.Where(d => d.isFolder && IsValidMMYYFolder(d.name)))
+                        {
+                            mmYYFolderCount++;
+                            totalItemsInMMYYFolders += GetDirectoryItemCount(dir.Path);
+                        }
+                    });
+
                     HelpText = $"Emptying out {mmYYFolderCount} folders that contain a total of {totalItemsInMMYYFolders} items."; // how many folders there are. (how many items inside all total?)
                     break;
             }
+
+            Win32.Application.Current.Dispatcher.Invoke(() => CommandManager.InvalidateRequerySuggested());
+
         }
 
         public async Task execute()
