@@ -5,36 +5,74 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FolderMMYYSorter_2" xmlns:viewmodel="clr-namespace:FolderMMYYSorter_2.MVVM.ViewModel"
         mc:Ignorable="d"
-        Title="MMYY Folder Sorter" Height="474" Width="816">
+        Title="MMYY Folder Sorter" Height="474" Width="816"
+        Background="AliceBlue">
 
     <Window.DataContext>
         <viewmodel:MainViewModel/>
     </Window.DataContext>
 
-    <Grid Margin="16">
-        <!-- Define three rows: Top (Auto), Middle (*), Bottom (Auto) -->
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Top row: Button + Text -->
+            <!--Top Row: Title and Instruction Card-->
+            <RowDefinition Height="80"/>
+            <!--Middle Row: Dynamical Content Area (Both title and function are rendered here)-->
             <RowDefinition Height="*"/>
-            <!-- Middle row: List -->
-            <RowDefinition Height="Auto"/>
-            <!-- Bottom row: Buttons + Text -->
-            <RowDefinition Height="Auto"/>
+            <!--Bottom Row: Navigation buttons-->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Row: Browse Button + Directory Text -->
+        <StackPanel Grid.Row="0"
+                    Background="AliceBlue"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="20">
+            <TextBlock Text="{Binding CurrentPage.Title}" FontWeight="Bold" FontSize="18"/>
+            <TextBlock Text="{Binding CurrentPage.Instructions}" FontWeight="Light" FontSize="14"/>
+        </StackPanel>
+        
+
+        <ContentControl Grid.Row="1" Margin="20" Content="{Binding CurrentPage}" Background="Wheat"/>
+
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    VerticalAlignment="Center" 
+                    HorizontalAlignment="Right"
+                    Margin="10,10,10,20">
+            <Button Content="Back" Width="80" Margin="0,0,8,0" Command="{Binding BackCommand}"/>
+            <Button Content="Next" Width="80" Margin="0,0,30,0" Command="{Binding NextCommand}"/>
+            <Button Content="Cancel" Width="80" Margin="0,0,8,0" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+
+
+    </Grid>
+    
+    <!--<Grid Margin="16">
+        --><!-- Define three rows: Top (Auto), Middle (*), Bottom (Auto) --><!--
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            --><!-- Top row: Button + Text --><!--
+            <RowDefinition Height="*"/>
+            --><!-- Middle row: List --><!--
+            <RowDefinition Height="Auto"/>
+            --><!-- Bottom row: Buttons + Text --><!--
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+                
+
+        --><!-- Top Row: Browse Button + Directory Text --><!--
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
             <Button Content="Browse" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
             <TextBlock Text="{Binding _FileExplorer.CurrentDirectory}" VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Middle Row: List of Files/Folders -->
+        --><!-- Middle Row: List of Files/Folders --><!--
         <ListView Grid.Row="1" 
               ItemsSource="{Binding _FileExplorer.DispFiles}" 
               Margin="0,0,0,8">
-            <!-- Optional: Customize item display -->
+            --><!-- Optional: Customize item display --><!--
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid Height="20">
@@ -51,7 +89,7 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <!-- Bottom Row: Sort Button, Empty Button, Result Text -->
+        --><!-- Bottom Row: Sort Button, Empty Button, Result Text --><!--
         <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
             <Button Content="Sort" Width="80" Margin="0,0,8,0" Command="{Binding SortCommand}"/>
             <Button Content="Empty" Width="80" Margin="0,0,8,0" Command="{Binding EmptyCommand}"/>
@@ -78,6 +116,6 @@
                 Width="80"
                 Margin="0,0,8,0"
                 Command="{Binding ExecuteCommand}"/>
-    </Grid>
+    </Grid>-->
 
 </Window>
