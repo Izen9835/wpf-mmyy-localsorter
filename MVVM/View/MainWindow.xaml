@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:FolderMMYYSorter_2" xmlns:viewmodel="clr-namespace:FolderMMYYSorter_2.MVVM.ViewModel"
         mc:Ignorable="d"
         Title="MMYY Folder Sorter" Height="474" Width="816"
-        Background="AliceBlue">
+        Background="White">
 
     <Window.DataContext>
         <viewmodel:MainViewModel/>
@@ -23,14 +23,13 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0"
-                    Background="AliceBlue"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Center"
-                    Margin="20">
-            <TextBlock Text="{Binding CurrentPage.Title}" FontWeight="Bold" FontSize="18"/>
-            <TextBlock Text="{Binding CurrentPage.Instructions}" FontWeight="Light" FontSize="14"/>
-        </StackPanel>
+        <Border Grid.Row="0" Background="NavajoWhite" Padding="16">
+            <StackPanel>
+                <TextBlock Text="{Binding CurrentPage.Title}" FontSize="20" FontWeight="Bold"/>
+                <TextBlock Text="{Binding CurrentPage.Instructions}"
+                           FontSize="14" Foreground="Gray"/>
+            </StackPanel>
+        </Border>
         
 
         <ContentControl Grid.Row="1" Margin="20" Content="{Binding CurrentPage}" Background="Wheat"/>

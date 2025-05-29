@@ -9,7 +9,10 @@
     
 
     <Grid>
-        <TextBlock Text="{Binding Title}"/>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button Content="Browse" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
+            <TextBlock Text="{Binding _FileExplorer.CurrentDirectory}" VerticalAlignment="Center" />
+        </StackPanel>
 
     </Grid>
 </UserControl>

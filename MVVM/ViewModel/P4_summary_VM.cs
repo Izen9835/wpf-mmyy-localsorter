@@ -11,7 +11,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
     {
         public P4_summary_VM(FileExplorer fileExplorer) : base(fileExplorer)
         {
-            Title = "persona 4 is better";
+            Title = "Summary";
+            Instructions = "Double check instructions and press Execute.";
 
         }
     }

@@ -11,7 +11,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
     {
         public P3_destdir_VM(FileExplorer fileExplorer) : base(fileExplorer)
         {
-            Title = "persona 3";
+            Title = "Select Destination";
+            Instructions = "Select a destination directory. (where will the output be stored)";
 
         }
     }

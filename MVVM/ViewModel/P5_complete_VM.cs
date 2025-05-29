@@ -11,7 +11,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
     {
         public P5_complete_VM(FileExplorer fileExplorer) : base(fileExplorer)
         {
-            Title = "get up get out";
+            Title = "Task Completed";
+            Instructions = "";
 
         }
     }

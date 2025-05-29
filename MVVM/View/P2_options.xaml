@@ -9,7 +9,14 @@
     
 
     <Grid>
-        <TextBlock Text="{Binding Title}"/>
+        <StackPanel>
+            <TextBlock Text="Please select one of the following options:" Margin="0,0,0,8"/>
+            <ComboBox ItemsSource="{Binding Options}"
+              SelectedItem="{Binding SelectedOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+              Width="200"/>
+            <TextBlock Text="{Binding Description}"/>
+        </StackPanel>
+
 
     </Grid>
 </UserControl>

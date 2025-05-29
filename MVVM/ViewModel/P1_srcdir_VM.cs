@@ -11,8 +11,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
     {
         public P1_srcdir_VM(FileExplorer fileExplorer) : base(fileExplorer)
         {
-            Title = "player 1";
-            Instructions = "asfasdfa";
+            Title = "Select Source";
+            Instructions = "Select a source directory";
 
 
         }
