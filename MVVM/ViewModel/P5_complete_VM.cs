@@ -13,6 +13,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
         {
             Title = "Task Completed";
             Instructions = "";
+            nextButtonText = "Finish";
 
         }
     }

@@ -24,8 +24,9 @@ namespace FolderMMYYSorter_2.IO
             get { return _CurrentDirectory; }
             set
             {
-                if (_CurrentDirectory != value)
+                if (Directory.Exists(value) && (_CurrentDirectory != value))
                 {
+                    // Only update this property if the input 'value' is valid
                     _CurrentDirectory = value;
                 }
             }
@@ -103,7 +104,7 @@ namespace FolderMMYYSorter_2.IO
             }
         }
 
-        private async Task updateDisplayedFiles()
+        public async Task updateDisplayedFiles()
         {
             // list directories first
             string[] dirs = await Task.Run(() => Directory.GetDirectories(CurrentDirectory));
@@ -146,6 +147,11 @@ namespace FolderMMYYSorter_2.IO
             dirsList.Clear();
             filesList.Clear();
 
+        }
+
+        public bool isCurrDirValid()
+        {
+            return Directory.Exists(CurrentDirectory);
         }
 
         public void updateMode(bool input)

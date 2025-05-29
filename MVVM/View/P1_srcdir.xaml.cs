@@ -24,5 +24,23 @@ namespace FolderMMYYSorter_2.MVVM.View
         {
             InitializeComponent();
         }
+
+
+        // The following code highlights the full textbox when you mouse (/keyboard(?)) click on the textbox
+        // To facilitate easy copy pasting of directories
+        private void TextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.TextBox tb)
+                tb.SelectAll();
+        }
+        private void TextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var tb = sender as System.Windows.Controls.TextBox;
+            if (tb != null && !tb.IsKeyboardFocusWithin)
+            {
+                tb.Focus();
+                e.Handled = true; // Prevents default caret placement
+            }
+        }
     }
 }

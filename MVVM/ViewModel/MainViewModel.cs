@@ -82,6 +82,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             {
                 _currentIndex--;
                 CurrentPage = _pages[_currentIndex];
+                OnPropertyChanged(nameof(_FileExplorer.CurrentDirectory)); // triggers the UI update
+
             }
 
 

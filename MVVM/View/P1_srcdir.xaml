@@ -16,8 +16,18 @@
 
         <!-- Top Row: Browse Button + Directory Text -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Content="Browse" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
-            <TextBlock Text="{Binding _FileExplorer.CurrentDirectory}" VerticalAlignment="Center" />
+            <Button Content="Browse" Height="20" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
+            <TextBox Text="{Binding _FileExplorer.CurrentDirectory, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" 
+                     VerticalAlignment="Center"
+                     Height="18"
+                     Width="500"
+                     GotKeyboardFocus="TextBox_GotKeyboardFocus"
+                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter"
+                                Command="{Binding UpdateDirCommand}"/>
+                </TextBox.InputBindings>
+            </TextBox>
         </StackPanel>
 
 
@@ -34,12 +44,12 @@
                     <Grid Height="20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="48"/>
-                            <ColumnDefinition Width="230"/>
-                            <ColumnDefinition Width="30*"/>
+                            <ColumnDefinition Width="500"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Image Source="{Binding IconName}" Width="20" Height="20" Stretch="Uniform"/>
+                        <Image Source="{Binding IconName}"/>
                         <TextBlock Grid.Column="1" Text="{Binding name}" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text="{Binding CreationDate}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding CreationDate}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

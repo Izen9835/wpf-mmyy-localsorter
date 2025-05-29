@@ -8,8 +8,17 @@
              d:DesignHeight="450" d:DesignWidth="800">
     
     <Grid Background="LightGray">
-        <TextBlock Text="{Binding Summary}"
-                   Margin="10"/>
+        <Border Background="LightGray"
+            CornerRadius="4"
+            Padding="10"
+            BorderBrush="#444"
+            BorderThickness="1">
+            <TextBlock Text="{Binding Summary}"
+                   FontFamily="Consolas"
+                   FontSize="14"
+                   Foreground="Black"
+                   TextWrapping="Wrap"/>
+        </Border>
 
     </Grid>
 </UserControl>

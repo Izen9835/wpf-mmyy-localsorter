@@ -10,7 +10,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 {
     class _baseviewmodel : INotifyPropertyChanged
     {
-        protected FileExplorer _FileExplorer { get; set; }
+        public FileExplorer _FileExplorer { get; set; }
 
         // event handler to reflect changes in ViewModel to UI
         public event PropertyChangedEventHandler PropertyChanged;
@@ -22,6 +22,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
         public string Title { get; set; }
         public string Instructions { get; set; }
 
+        public string nextButtonText { get; set; }
+
 
         public _baseviewmodel(FileExplorer fileExplorer)
         {
@@ -31,6 +33,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             // default title and instructions
             Title = "Default Title Text";
             Instructions = "lorem ipsum default instructions text";
+            nextButtonText = "Next";
         }
     }
 }
