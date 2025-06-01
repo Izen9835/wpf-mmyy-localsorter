@@ -9,10 +9,16 @@
     
 
     <Grid>
+        <!-- Top Row: Browse Button + Directory Text -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
-            <Button Content="Browse" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
-            <TextBlock Text="{Binding _FileExplorer.CurrentDirectory}" VerticalAlignment="Center" />
+            <Button Content="Browse" Height="20" Width="80" Margin="0,0,8,0" Command="{Binding BrowseCommand}"/>
+            <TextBox Text="{Binding _FileExplorer.DestDirectory, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" 
+                     VerticalAlignment="Center"
+                     Height="18"
+                     Width="500"
+                     GotKeyboardFocus="TextBox_GotKeyboardFocus"
+                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+            </TextBox>
         </StackPanel>
-
     </Grid>
 </UserControl>

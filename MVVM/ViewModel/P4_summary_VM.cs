@@ -10,7 +10,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
     class P4_summary_VM : _baseviewmodel
     {
 
-        private string _Summary = "Instructions Summary:\r\n- Select the target directory for file processing.\r\n- Specify the number of files to include in this operation.\r\n- Review the list of files to be changed, added, or removed.\r\n- Confirm all parameters are correct.\r\n- Press 'Execute' to begin the operation.\r\n";
+        private string _Summary;
 
         public string Summary
         {
@@ -30,7 +30,9 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             Instructions = "Double check instructions and press Execute.";
             nextButtonText = "Execute";
 
-            Summary = "Instructions Summary:\r\n- Select the target directory for file processing.\r\n- Specify the number of files to include in this operation.\r\n- Review the list of files to be changed, added, or removed.\r\n- Confirm all parameters are correct.\r\n- Press 'Execute' to begin the operation.\r\n";
+            //Summary = "Instructions Summary:\r\n- Select the target directory for file processing.\r\n- Specify the number of files to include in this operation.\r\n- Review the list of files to be changed, added, or removed.\r\n- Confirm all parameters are correct.\r\n- Press 'Execute' to begin the operation.\r\n";
+
+            Summary = "// under construction //";
             OnPropertyChanged(nameof(Summary));
 
         }

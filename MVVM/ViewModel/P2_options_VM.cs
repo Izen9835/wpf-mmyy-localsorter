@@ -54,6 +54,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
                             Description = "Sort the subfolders/items of all the folders in the specified directory.";
                             break;
                     }
+                    _FileExplorer.updateIsSubFolder(_selectedOption == "Sort Subdirectories");
                 }
             }
         }
@@ -62,6 +63,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
         {
             Title = "Options";
             Instructions = "Configure which files you want to sort.";
+
+            SelectedOption = "Sort Directory";
 
         }
     }

@@ -51,25 +51,22 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             _currentIndex = 0;
             CurrentPage = _pages[_currentIndex];
 
-            NextCommand = new RelayCommand(_ => GoNext(), _ => _currentIndex < _pages.Count - 1);
-            BackCommand = new RelayCommand(_ => GoBack(), _ => _currentIndex > 0);
-            CancelCommand = new RelayCommand(_ => Cancel());
+            NextCommand = new RelayCommand(
+                o => GoNext(), 
+                o => _currentIndex < _pages.Count - 1);
+            BackCommand = new RelayCommand(o => GoBack(), o => _currentIndex > 0);
+            CancelCommand = new RelayCommand(o => Cancel());
 
-
-
-
-            //BrowseCommand = new RelayCommand(o => _FileExplorer.fileDialog());
-
-            //SortCommand = new RelayCommand(
-            //    o => _FileExplorer.updateMode(true),
-            //    o => (_FileExplorer.CurrentDirectory != "Loading...." &&
-            //          _FileExplorer.CurrentDirectory != "Select a folder.")
-            //    );
         }
-        private void GoNext()
+        private async Task GoNext()
         {
             if (_currentIndex < _pages.Count - 1)
             {
+                if (CurrentPage.GetType() == typeof(P4_summary_VM)) 
+                    // there must be a more elegant way...
+                    // that allows this part of the code to be placed under P4's VM
+                    await _FileExplorer.execute();
+
                 _currentIndex++;
                 CurrentPage = _pages[_currentIndex];
             }
