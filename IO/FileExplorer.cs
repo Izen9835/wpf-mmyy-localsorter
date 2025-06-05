@@ -28,6 +28,7 @@ namespace FolderMMYYSorter_2.IO
                 {
                     // Only update this property if the input 'value' is valid
                     _CurrentDirectory = value;
+                    updateDisplayedFiles();
                 }
             }
         }
@@ -132,7 +133,7 @@ namespace FolderMMYYSorter_2.IO
                 "Select the directory that you want to perform actions on.";
 
             // Do not allow the user to create new files via the FolderBrowserDialog.
-            openFoldDlg.ShowNewFolderButton = false;
+            openFoldDlg.ShowNewFolderButton = true;
 
             // Show dialog and check result
             System.Windows.Forms.DialogResult result = openFoldDlg.ShowDialog();
@@ -302,23 +303,46 @@ namespace FolderMMYYSorter_2.IO
 
         }
 
-        public async Task execute()
+
+
+        public async Task<bool> execute(IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
         {
             // if isModeSubFolder then access from subDirsList
             // else access from baseDirsList
 
-            List<DirFileModel> src;
+            List<DirFileModel> src = [];
             if (isModeSubFolder)
                 src = subDirsList;
             else
                 src = baseDirsList;
 
+            List<string> errors = [];
+
+            if (src == null || src.Count == 0) errors.Add("No items found in source directory");
+
+            // can add other checks also
+
+            if (errors.Count > 0)
+            {
+                MessageBox.Show(
+                    $"Missing requirements:\n\n{string.Join("\n• ", errors)}",
+                    "Action Cannot Proceed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Exclamation);
+                return false;
+            }
+
+
+
+            // for progress bar
+            int totalItems = src.Count;
+            int processedItems = 0;
+
+
             IEnumerable<IGrouping<string, DirFileModel>> yyMMGroups;
-            yyMMGroups = await Task.Run(
-                () => src
+            yyMMGroups = src
                        .GroupBy(f => f.CreationDate.ToString("yyMM"))
-                       .ToList()
-                       );
+                       .ToList();
 
             foreach (var group in yyMMGroups)
             {
@@ -327,13 +351,27 @@ namespace FolderMMYYSorter_2.IO
                 Directory.CreateDirectory(targetDir);
                 foreach (var file in group)
                 {
+                    Debug.WriteLine($"processing {file.name}");
+
+                    processedItems++;
+                    ProgressValue?.Report((processedItems * 100) / totalItems);
+                    CurrentItem?.Report(file.name);
+
                     string targetPath = Path.Combine(targetDir, file.name);
-                    if (file.isFolder)
-                        CopyDirectory(file.Path, targetPath, true);
-                    else
-                        File.Copy(file.Path, targetPath);
+                    // Move individual file operations to background thread
+                    // this allows the ProgressBar UI to update
+                    await Task.Run(() =>
+                    {
+                        if (file.isFolder)
+                            CopyDirectory(file.Path, targetPath, true);
+                        else
+                            File.Copy(file.Path, targetPath);
+                    });
                 }
+
             }
+
+            return true;
         }
 
 

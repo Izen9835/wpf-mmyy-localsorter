@@ -7,7 +7,13 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     
-    <Grid Background="LightGray">
+    <Grid>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        
         <Border Background="LightGray"
             CornerRadius="4"
             Padding="10"
@@ -19,6 +25,19 @@
                    Foreground="Black"
                    TextWrapping="Wrap"/>
         </Border>
+
+        <StackPanel Grid.Row="1">
+            <ProgressBar Name="ProgressBar" 
+                         Height="3"
+                         Margin="0,5,0,0"
+                         Value="{Binding ProgressValue}"/>
+            <TextBlock Name="CurrentItemText" 
+                       FontSize="10"
+                       FontFamily="Consolas"
+                       Text="{Binding CurrentItemText}"/>
+        </StackPanel>
+        
+        
 
     </Grid>
 </UserControl>

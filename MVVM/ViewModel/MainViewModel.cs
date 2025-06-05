@@ -1,5 +1,6 @@
 ﻿using FolderMMYYSorter_2.IO;
 using FolderMMYYSorter_2.MVVM.Core;
+using FolderMMYYSorter_2.MVVM.View;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace FolderMMYYSorter_2.MVVM.ViewModel
 {
@@ -24,6 +26,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             get => _currentPage;
             set { _currentPage = value; OnPropertyChanged(nameof(CurrentPage)); }
         }
+
+       
 
         private readonly List<_baseviewmodel> _pages;
         private int _currentIndex;
@@ -62,16 +66,23 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
         {
             if (_currentIndex < _pages.Count - 1)
             {
-                if (CurrentPage.GetType() == typeof(P4_summary_VM)) 
+                bool result;
+                if (CurrentPage.GetType() == typeof(P4_summary_VM))
+                {
                     // there must be a more elegant way...
                     // that allows this part of the code to be placed under P4's VM
-                    await _FileExplorer.execute();
+                    var p4ViewModel = (P4_summary_VM)CurrentPage;
+                    result = await p4ViewModel.Execute_w_Prog_Bar();
+                }
 
                 _currentIndex++;
                 CurrentPage = _pages[_currentIndex];
             }
 
         }
+
+
+
 
         private void GoBack()
         {
