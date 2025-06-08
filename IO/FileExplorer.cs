@@ -1,5 +1,6 @@
 ﻿using FolderMMYYSorter_2.MVVM.Model;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -28,10 +29,39 @@ namespace FolderMMYYSorter_2.IO
                 {
                     // Only update this property if the input 'value' is valid
                     _CurrentDirectory = value;
-                    updateDisplayedFiles();
                 }
             }
         }
+
+        private string _Summary = "placeholder summary";
+        public string Summary
+        {
+            get { return _Summary; }
+            set
+            {
+                if (_Summary != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _Summary = value;
+                }
+            }
+        }
+
+        private string _FolderName = "";
+        public string FolderName
+        {
+            get { return _FolderName; }
+            set
+            {
+                if (_FolderName != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _FolderName = value;
+                    generateSummary();
+                }
+            }
+        }
+
 
         private string _DestDirectory = "Select a folder.";
         public string DestDirectory
@@ -43,22 +73,7 @@ namespace FolderMMYYSorter_2.IO
                 {
                     // Only update this property if the input 'value' is valid
                     _DestDirectory = value;
-                }
-            }
-        }
-
-        private string _HelpText = "Select a folder above.";
-        public string HelpText
-        {
-            get { return _HelpText; }
-            set
-            {
-                if (_HelpText != value)
-                {
-                    _HelpText = value;
-                    OnPropertyChanged(nameof(HelpText)); // triggers the UI update
-                    CommandManager.InvalidateRequerySuggested(); // Force command refresh
-
+                    generateSummary();
                 }
             }
         }
@@ -72,11 +87,11 @@ namespace FolderMMYYSorter_2.IO
         public List<DirFileModel> baseDirsList;
         public List<DirFileModel> subDirsList;
 
+        public bool isExecuting = false;
+
 
         public ObservableCollection<DirFileModel> DispFiles { get; set; }
 
-
-        private IEnumerable<IGrouping<string, DirFileModel>> mmYYGroups;
 
         // event handler to clear message bar when send message
         public event PropertyChangedEventHandler PropertyChanged;
@@ -92,6 +107,60 @@ namespace FolderMMYYSorter_2.IO
             OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
 
             DispFiles = new ObservableCollection<DirFileModel>();
+        }
+
+
+        public void generateSummary()
+        {
+            var destDir = Path.Combine(DestDirectory, FolderName);
+            var _sum = "";
+
+            _sum += "Source:\n";
+            _sum += "Data to copy: ";
+            _sum += Double.Round(getSourceSize(),2) + " GB";
+
+            _sum += "\n\n";
+            _sum += "Output Directory:\n";
+            _sum += destDir;
+
+            Summary = _sum;
+        }
+
+
+        private double getSourceSize()
+        {
+            List<DirFileModel> src = [];
+            if (isModeSubFolder)
+                src = subDirsList;
+            else
+                src = baseDirsList;
+
+            double output = 0;
+
+            foreach (var item in src){
+                if (item.isFolder) output += DirSize(new DirectoryInfo(item.Path));
+                else output += new FileInfo(item.Path).Length;
+            }
+
+            return output/1000000000.0;
+        }
+
+        public static long DirSize(DirectoryInfo d)
+        {
+            long size = 0;
+            // Add file sizes.
+            FileInfo[] fis = d.GetFiles();
+            foreach (FileInfo fi in fis)
+            {
+                size += fi.Length;
+            }
+            // Add subdirectory sizes.
+            DirectoryInfo[] dis = d.GetDirectories();
+            foreach (DirectoryInfo di in dis)
+            {
+                size += DirSize(di);
+            }
+            return size;
         }
 
 
@@ -116,9 +185,8 @@ namespace FolderMMYYSorter_2.IO
                 OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
                 CurrentDirectory = openFoldDlg.SelectedPath;
 
-                await updateDisplayedFiles();
+                await UpdateDisplayedFilesAsync();
                 OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
-                HelpText = "Select a mode.";
                 
             }
         }
@@ -130,9 +198,8 @@ namespace FolderMMYYSorter_2.IO
             openFoldDlg.InitialDirectory = @"C:\Temp\";
 
             openFoldDlg.Description =
-                "Select the directory that you want to perform actions on.";
+                "Select the output directory";
 
-            // Do not allow the user to create new files via the FolderBrowserDialog.
             openFoldDlg.ShowNewFolderButton = true;
 
             // Show dialog and check result
@@ -153,48 +220,53 @@ namespace FolderMMYYSorter_2.IO
         // that is also called by P2_options page
         public async Task updateDisplayedFiles()
         {
+
             // list directories first
+            Debug.WriteLine("listing directories");
             string[] dirs = await Task.Run(() => Directory.GetDirectories(CurrentDirectory));
             baseDirsList = await Task.Run(() => dirs.Select(
                 dirPath => new DirFileModel
             {
                 name = System.IO.Path.GetFileName(dirPath),
-                CreationDate = new FileInfo(dirPath).LastWriteTime,
+                CreationDate = new FileInfo(dirPath).CreationTime,
                 isFolder = true,
                 Path = dirPath,
             }).ToList());
 
 
             // list files next
+            Debug.WriteLine("listing files");
             string[] files = await Task.Run(() => Directory.GetFiles(CurrentDirectory));
             baseDirsList.AddRange(await Task.Run(() => files.Select( // considering using EnumerateFiles EnumerateDirectories instead
                 filePath => new DirFileModel
                 {
                     name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).LastWriteTime,
+                    CreationDate = new FileInfo(filePath).CreationTime,
                     isFolder = false,
                     Path = filePath,
                 }).ToList()));
 
 
             // list subdirectories folders
+            Debug.WriteLine("listing subfolders");
             var subDirs = await Task.Run(() => dirs.SelectMany(dir => Directory.GetDirectories(dir).ToList()));
             subDirsList = await Task.Run(() => subDirs.Select(
                 dirPath => new DirFileModel
                 {
                     name = System.IO.Path.GetFileName(dirPath),
-                    CreationDate = new FileInfo(dirPath).LastWriteTime,
+                    CreationDate = new FileInfo(dirPath).CreationTime,
                     isFolder = true,
                     Path = dirPath,
                 }).ToList());
 
             // list subdirectories files next
+            Debug.WriteLine("listing subfiles");
             var subFiles = await Task.Run(() => dirs.SelectMany(file => Directory.GetFiles(file).ToList()));
             subDirsList.AddRange(await Task.Run(() => subFiles.Select( // considering using EnumerateFiles EnumerateDirectories instead
                 filePath => new DirFileModel
                 {
                     name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).LastWriteTime,
+                    CreationDate = new FileInfo(filePath).CreationTime,
                     isFolder = false,
                     Path = filePath,
                 }).ToList()));
@@ -202,6 +274,7 @@ namespace FolderMMYYSorter_2.IO
 
             // do as a batch to save resources
             // display all directories and files
+            Debug.WriteLine("updating UI...");
             Win32.Application.Current.Dispatcher.Invoke(() =>
             {
                 DispFiles.Clear();
@@ -213,6 +286,69 @@ namespace FolderMMYYSorter_2.IO
 
         }
 
+        public async Task UpdateDisplayedFilesAsync()
+        {
+            if (isExecuting) return;
+            isExecuting = true;
+
+            baseDirsList = new List<DirFileModel>();
+            subDirsList = new List<DirFileModel>();
+
+            var baseBag = new ConcurrentBag<DirFileModel>();
+            var subBag = new ConcurrentBag<DirFileModel>();
+
+            await Task.Run(() =>
+            {
+                // 1. Process all files and folders in the chosen directory (top level)
+                var baseEntries = new DirectoryInfo(CurrentDirectory).EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+                Parallel.ForEach(baseEntries, info =>
+                {
+                    baseBag.Add(new DirFileModel
+                    {
+                        name = info.Name,
+                        CreationDate = info.CreationTime,
+                        isFolder = info is DirectoryInfo,
+                        Path = info.FullName
+                    });
+                });
+
+                // 2. Process all files and folders one layer into each folder of the chosen directory
+                var subDirs = new DirectoryInfo(CurrentDirectory).EnumerateDirectories("*", SearchOption.TopDirectoryOnly);
+                Parallel.ForEach(subDirs, subDir =>
+                {
+                    var subEntries = subDir.EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+                    foreach (var info in subEntries)
+                    {
+                        subBag.Add(new DirFileModel
+                        {
+                            name = info.Name,
+                            CreationDate = info.CreationTime,
+                            isFolder = info is DirectoryInfo,
+                            Path = info.FullName
+                        });
+                    }
+                });
+            });
+
+            baseDirsList = baseBag.ToList();
+            subDirsList = subBag.ToList();
+
+            isExecuting = false;
+
+            generateSummary();
+
+            // Update UI
+            Win32.Application.Current.Dispatcher.Invoke(() =>
+            {
+                DispFiles.Clear();
+
+                foreach (var item in baseDirsList)
+                {
+                    DispFiles.Add(item);
+                }
+            });
+        }
+
         public bool isCurrDirValid()
         {
             return Directory.Exists(CurrentDirectory);
@@ -221,7 +357,6 @@ namespace FolderMMYYSorter_2.IO
         public void updateMode(bool input)
         {
             isModeSorting = input;
-            Task.Run(() => updateHelpText());
         }
 
         public void updateIsSubFolder(bool input)
@@ -251,59 +386,6 @@ namespace FolderMMYYSorter_2.IO
             }
         }
 
-        private bool IsValidMMYYFolder(string folderName)
-        {
-            if (folderName.Length != 4 || !folderName.All(char.IsDigit))
-                return false;
-            int month = int.Parse(folderName.Substring(0, 2));
-            int year = int.Parse(folderName.Substring(2, 2));
-            return month >= 1 && month <= 12 && year >= 0 && year <= 99;
-        }
-
-        private int GetDirectoryItemCount(string path)
-        {
-            try { return Directory.GetFileSystemEntries(path).Length; }
-            catch { return 0; }
-        }
-
-        private async Task updateHelpText()
-        {
-            HelpText = "Loading....";
-            switch (isModeSorting)
-            {
-                case true: // Sorting
-                    mmYYGroups = await Task.Run(
-                        () => DispFiles
-                                .Where(f => !IsValidMMYYFolder(f.name)) // do not sort files that are in MMYY format
-                                .GroupBy(f => f.CreationDate.ToString("MMyy"))
-                                .ToList()
-                                );
-                    HelpText = $"Sort above {DispFiles.Count} files into {mmYYGroups.Count()} folders. \nMMYY files are ignored. \nPress Execute."; // how many files there are, how many folders they will be sorted into
-                    break;
-
-
-                case false: // Emptying
-                    int mmYYFolderCount = 0;
-                    int totalItemsInMMYYFolders = 0;
-
-                    await Task.Run(() =>
-                    {
-                        foreach (var dir in DispFiles.Where(d => d.isFolder && IsValidMMYYFolder(d.name)))
-                        {
-                            mmYYFolderCount++;
-                            totalItemsInMMYYFolders += GetDirectoryItemCount(dir.Path);
-                        }
-                    });
-
-                    HelpText = $"Emptying out {mmYYFolderCount} folders that contain a total of {totalItemsInMMYYFolders} items."; // how many folders there are. (how many items inside all total?)
-                    break;
-            }
-
-            Win32.Application.Current.Dispatcher.Invoke(() => CommandManager.InvalidateRequerySuggested());
-
-        }
-
-
 
         public async Task<bool> execute(IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
         {
@@ -316,9 +398,13 @@ namespace FolderMMYYSorter_2.IO
             else
                 src = baseDirsList;
 
+            var dst = Path.Combine(DestDirectory, FolderName);
+
             List<string> errors = [];
 
             if (src == null || src.Count == 0) errors.Add("No items found in source directory");
+            if (!Directory.Exists(DestDirectory)) errors.Add("Destination is invalid");
+            if (FolderName == "") errors.Add("Fill in a folder name");
 
             // can add other checks also
 
@@ -338,38 +424,46 @@ namespace FolderMMYYSorter_2.IO
             int totalItems = src.Count;
             int processedItems = 0;
 
+            var exceptions = new ConcurrentBag<Exception>();
 
-            IEnumerable<IGrouping<string, DirFileModel>> yyMMGroups;
-            yyMMGroups = src
-                       .GroupBy(f => f.CreationDate.ToString("yyMM"))
-                       .ToList();
 
-            foreach (var group in yyMMGroups)
+            // Process in parallel
+            await Task.Run(() =>
             {
-                string yyMM = group.Key;
-                string targetDir = Path.Combine(DestDirectory, yyMM);
-                Directory.CreateDirectory(targetDir);
-                foreach (var file in group)
+                Parallel.ForEach(src, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
                 {
-                    Debug.WriteLine($"processing {file.name}");
-
-                    processedItems++;
-                    ProgressValue?.Report((processedItems * 100) / totalItems);
-                    CurrentItem?.Report(file.name);
-
-                    string targetPath = Path.Combine(targetDir, file.name);
-                    // Move individual file operations to background thread
-                    // this allows the ProgressBar UI to update
-                    await Task.Run(() =>
+                    try
                     {
+                        var yyMM = file.CreationDate.ToString("yyMM");
+                        var targetDir = Path.Combine(dst, yyMM);
+
+                        // Ensure the directory exists (safe to call repeatedly)
+                        Directory.CreateDirectory(targetDir);
+
+                        string targetPath = Path.Combine(targetDir, file.name);
+
                         if (file.isFolder)
                             CopyDirectory(file.Path, targetPath, true);
                         else
-                            File.Copy(file.Path, targetPath);
-                    });
-                }
+                            File.Copy(file.Path, targetPath, overwrite: true);
 
+                        var newCount = Interlocked.Increment(ref processedItems);
+                        ProgressValue?.Report((newCount * 100) / totalItems);
+                        CurrentItem?.Report(file.name);
+                    }
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
+                });
+            });
+
+            // Handle any exceptions
+            if (!exceptions.IsEmpty)
+            {
+                throw new AggregateException(exceptions);
             }
+
 
             return true;
         }
@@ -396,7 +490,7 @@ namespace FolderMMYYSorter_2.IO
             foreach (FileInfo file in dir.GetFiles())
             {
                 string targetFilePath = Path.Combine(destinationDir, file.Name);
-                file.CopyTo(targetFilePath);
+                file.CopyTo(targetFilePath, overwrite:true);
             }
 
             // If recursive and copying subdirectories, recursively call this method

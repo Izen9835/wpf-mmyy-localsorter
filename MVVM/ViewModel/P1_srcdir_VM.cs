@@ -24,7 +24,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             UpdateDirCommand = new RelayCommand(
             async o =>
             {
-                await _FileExplorer.updateDisplayedFiles();
+                await _FileExplorer.UpdateDisplayedFilesAsync();
                 Debug.WriteLine(_FileExplorer.CurrentDirectory);
             },
             o => _FileExplorer.isCurrDirValid()

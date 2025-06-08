@@ -23,14 +23,14 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 
             BrowseCommand = new RelayCommand(o => _FileExplorer.destFileDialog());
 
-            UpdateDirCommand = new RelayCommand(
-            async o =>
-            {
-                await _FileExplorer.updateDisplayedFiles();
-                Debug.WriteLine(_FileExplorer.CurrentDirectory);
-            },
-            o => _FileExplorer.isCurrDirValid()
-);
+            //UpdateDirCommand = new RelayCommand(
+            //async o =>
+            //{
+            //    await _FileExplorer.updateDisplayedFiles();
+            //    Debug.WriteLine(_FileExplorer.CurrentDirectory);
+            //},
+            //o => _FileExplorer.isCurrDirValid()
+            //);
 
         }
     }

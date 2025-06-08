@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Win32 = System.Windows;
@@ -12,27 +13,10 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 {
     class P4_summary_VM : _baseviewmodel
     {
-
-        public MainViewModel MainVM { get; set; }
-        
-        private string _Summary;
+       
         private int _progressValue;
         private string _currentItemText;
         private string _progressText;
-
-        public string Summary
-        {
-            get => _Summary;
-            set
-            {
-                if (_Summary != value)
-                {
-                    _Summary = value;
-                    OnPropertyChanged(nameof(Summary));
-                }
-            }
-        }
-
 
 
         public int ProgressValue
@@ -73,15 +57,17 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 
             //Summary = "Instructions Summary:\r\n- Select the target directory for file processing.\r\n- Specify the number of files to include in this operation.\r\n- Review the list of files to be changed, added, or removed.\r\n- Confirm all parameters are correct.\r\n- Press 'Execute' to begin the operation.\r\n";
 
-            Summary = "// under construction //";
-            OnPropertyChanged(nameof(Summary));
-
-            CurrentItemText = "bruh";
+            CurrentItemText = "Pending execution.";
 
         }
 
         public async Task<bool> Execute_w_Prog_Bar()
         {
+            if (_FileExplorer.isExecuting == true)
+            {
+                Debug.WriteLine("cannot start. execution in progress!");
+                return false;
+            }
             var progress = new Progress<int>(percent =>
             {
                 Win32.Application.Current.Dispatcher.Invoke(() =>

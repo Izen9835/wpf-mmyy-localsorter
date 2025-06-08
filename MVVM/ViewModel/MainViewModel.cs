@@ -73,10 +73,18 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
                     // that allows this part of the code to be placed under P4's VM
                     var p4ViewModel = (P4_summary_VM)CurrentPage;
                     result = await p4ViewModel.Execute_w_Prog_Bar();
-                }
 
-                _currentIndex++;
-                CurrentPage = _pages[_currentIndex];
+                    if (result)
+                    {
+                        _currentIndex++;
+                        CurrentPage = _pages[_currentIndex];
+                    }
+                }
+                else
+                {
+                    _currentIndex++;
+                    CurrentPage = _pages[_currentIndex];
+                }
             }
 
         }
