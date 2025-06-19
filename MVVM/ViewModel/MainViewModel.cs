@@ -49,6 +49,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
                 new P1_srcdir_VM(_FileExplorer),
                 new P2_options_VM(_FileExplorer),
                 new P3_destdir_VM(_FileExplorer),
+                new P3a_SQLOption_VM(_FileExplorer),
                 new P4_summary_VM(_FileExplorer),
                 new P5_complete_VM(_FileExplorer),
             };

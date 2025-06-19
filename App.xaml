@@ -15,6 +15,9 @@
         <DataTemplate DataType="{x:Type viewmodel:P3_destdir_VM}">
             <views:P3_destdir/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type viewmodel:P3a_SQLOption_VM}">
+            <views:P3a_SQLOption/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type viewmodel:P4_summary_VM}">
             <views:P4_summary/>
         </DataTemplate>

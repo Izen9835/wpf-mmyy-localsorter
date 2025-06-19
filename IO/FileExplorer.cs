@@ -78,6 +78,25 @@ namespace FolderMMYYSorter_2.IO
             }
         }
 
+        private bool _isUsingSQLDB = false;
+        public bool isUsingSQLDB
+        {
+            get { return _isUsingSQLDB; }
+            set
+            {
+                if (_isUsingSQLDB != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _isUsingSQLDB = value;
+                    OnPropertyChanged(nameof(isUsingSQLDB));
+                    if (_isUsingSQLDB)
+                    {
+                        Debug.WriteLine(_SqlHelper.GetDatabaseNames("localhost"));
+                    }
+                }
+            }
+        }
+
 
         public bool isModeSorting { get; set; }
         // as opposed to emptying mode
@@ -100,6 +119,8 @@ namespace FolderMMYYSorter_2.IO
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        public SqlHelper _SqlHelper { get; set; }
+
 
 
         public FileExplorer()
@@ -107,6 +128,8 @@ namespace FolderMMYYSorter_2.IO
             OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
 
             DispFiles = new ObservableCollection<DirFileModel>();
+
+            _SqlHelper = new SqlHelper();
         }
 
 
@@ -136,6 +159,9 @@ namespace FolderMMYYSorter_2.IO
                 src = baseDirsList;
 
             double output = 0;
+
+            // src is empty
+            if (src == null || src.Count == 0) return 0;
 
             foreach (var item in src){
                 if (item.isFolder) output += DirSize(new DirectoryInfo(item.Path));
@@ -218,74 +244,6 @@ namespace FolderMMYYSorter_2.IO
         // but main function is to read CurrentDir
         // updating the DispFiles could be a separate function 
         // that is also called by P2_options page
-        public async Task updateDisplayedFiles()
-        {
-
-            // list directories first
-            Debug.WriteLine("listing directories");
-            string[] dirs = await Task.Run(() => Directory.GetDirectories(CurrentDirectory));
-            baseDirsList = await Task.Run(() => dirs.Select(
-                dirPath => new DirFileModel
-            {
-                name = System.IO.Path.GetFileName(dirPath),
-                CreationDate = new FileInfo(dirPath).CreationTime,
-                isFolder = true,
-                Path = dirPath,
-            }).ToList());
-
-
-            // list files next
-            Debug.WriteLine("listing files");
-            string[] files = await Task.Run(() => Directory.GetFiles(CurrentDirectory));
-            baseDirsList.AddRange(await Task.Run(() => files.Select( // considering using EnumerateFiles EnumerateDirectories instead
-                filePath => new DirFileModel
-                {
-                    name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).CreationTime,
-                    isFolder = false,
-                    Path = filePath,
-                }).ToList()));
-
-
-            // list subdirectories folders
-            Debug.WriteLine("listing subfolders");
-            var subDirs = await Task.Run(() => dirs.SelectMany(dir => Directory.GetDirectories(dir).ToList()));
-            subDirsList = await Task.Run(() => subDirs.Select(
-                dirPath => new DirFileModel
-                {
-                    name = System.IO.Path.GetFileName(dirPath),
-                    CreationDate = new FileInfo(dirPath).CreationTime,
-                    isFolder = true,
-                    Path = dirPath,
-                }).ToList());
-
-            // list subdirectories files next
-            Debug.WriteLine("listing subfiles");
-            var subFiles = await Task.Run(() => dirs.SelectMany(file => Directory.GetFiles(file).ToList()));
-            subDirsList.AddRange(await Task.Run(() => subFiles.Select( // considering using EnumerateFiles EnumerateDirectories instead
-                filePath => new DirFileModel
-                {
-                    name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).CreationTime,
-                    isFolder = false,
-                    Path = filePath,
-                }).ToList()));
-
-
-            // do as a batch to save resources
-            // display all directories and files
-            Debug.WriteLine("updating UI...");
-            Win32.Application.Current.Dispatcher.Invoke(() =>
-            {
-                DispFiles.Clear();
-
-                foreach (var dir in baseDirsList)
-                    DispFiles.Add(dir);
-
-            });
-
-        }
-
         public async Task UpdateDisplayedFilesAsync()
         {
             if (isExecuting) return;
@@ -354,11 +312,6 @@ namespace FolderMMYYSorter_2.IO
             return Directory.Exists(CurrentDirectory);
         }
 
-        public void updateMode(bool input)
-        {
-            isModeSorting = input;
-        }
-
         public void updateIsSubFolder(bool input)
         {
             isModeSubFolder = input;
@@ -392,11 +345,9 @@ namespace FolderMMYYSorter_2.IO
             // if isModeSubFolder then access from subDirsList
             // else access from baseDirsList
 
-            List<DirFileModel> src = [];
-            if (isModeSubFolder)
-                src = subDirsList;
-            else
-                src = baseDirsList;
+            List<DirFileModel> src = isModeSubFolder 
+                                        ? subDirsList 
+                                        : baseDirsList;
 
             var dst = Path.Combine(DestDirectory, FolderName);
 
@@ -405,8 +356,7 @@ namespace FolderMMYYSorter_2.IO
             if (src == null || src.Count == 0) errors.Add("No items found in source directory");
             if (!Directory.Exists(DestDirectory)) errors.Add("Destination is invalid");
             if (FolderName == "") errors.Add("Fill in a folder name");
-
-            // can add other checks also
+            if (isUsingSQLDB && !_SqlHelper.hasSQLData()) errors.Add("no SQL data found");
 
             if (errors.Count > 0)
             {
@@ -426,6 +376,8 @@ namespace FolderMMYYSorter_2.IO
 
             var exceptions = new ConcurrentBag<Exception>();
 
+            int Gov = 0; int IC = 0; int Unknown = 0;
+
 
             // Process in parallel
             await Task.Run(() =>
@@ -435,7 +387,31 @@ namespace FolderMMYYSorter_2.IO
                     try
                     {
                         var yyMM = file.CreationDate.ToString("yyMM");
-                        var targetDir = Path.Combine(dst, yyMM);
+
+                        // get fileType from Sql server data
+                        var fileType = isUsingSQLDB 
+                                        ? _SqlHelper.filetypeOf(file.name) 
+                                        : ""; // "" safe for Path.Combine
+
+                        // remove after debug
+                        switch (fileType)
+                        {
+                            case "IC":
+                                IC += 1;
+                                break;
+                            case "Gov":
+                                Gov += 1;
+                                break;
+                            case "Unknown":
+                                Unknown += 1;
+                                break;
+                            default:
+                                break;
+                        }
+                        // remove after debug
+
+
+                        var targetDir = Path.Combine(dst, fileType, yyMM);
 
                         // Ensure the directory exists (safe to call repeatedly)
                         Directory.CreateDirectory(targetDir);
@@ -447,9 +423,16 @@ namespace FolderMMYYSorter_2.IO
                         else
                             File.Copy(file.Path, targetPath, overwrite: true);
 
-                        var newCount = Interlocked.Increment(ref processedItems);
-                        ProgressValue?.Report((newCount * 100) / totalItems);
-                        CurrentItem?.Report(file.name);
+                        // update UI periodically (not with every object)
+                        // otherwise UI will simply seize
+                        int reportFrequency = 10;
+                        int newCount = Interlocked.Increment(ref processedItems);
+                        if (newCount % reportFrequency == 0 || newCount == totalItems)
+                        {
+                            ProgressValue?.Report((newCount * 100) / totalItems);
+                            CurrentItem?.Report(file.name);
+                        }
+
                     }
                     catch (Exception ex)
                     {
@@ -464,6 +447,10 @@ namespace FolderMMYYSorter_2.IO
                 throw new AggregateException(exceptions);
             }
 
+            Debug.WriteLine("Total Files copied");
+            Debug.WriteLine("IC: " + IC);
+            Debug.WriteLine("Gov: " + Gov);
+            Debug.WriteLine("Unknown: " + Unknown);
 
             return true;
         }

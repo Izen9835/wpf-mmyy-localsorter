@@ -1,0 +1,22 @@
+﻿<UserControl x:Class="FolderMMYYSorter_2.MVVM.View.P3a_SQLOption"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:FolderMMYYSorter_2.MVVM.View"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <StackPanel Orientation="Vertical" Margin="50,50,0,0" HorizontalAlignment="Left">
+            <CheckBox Content="use database data" IsChecked="{Binding _FileExplorer.isUsingSQLDB}"/>
+            <ComboBox ItemsSource="{Binding _FileExplorer._SqlHelper.DatabaseNames}"
+                      SelectedItem="{Binding _FileExplorer._SqlHelper.DBName}"
+                      Margin="0,20,0,0"
+                      IsEnabled="{Binding _FileExplorer.isUsingSQLDB}"
+                      Width="200"
+                      Height="25"/>
+
+        </StackPanel>
+
+    </Grid>
+</UserControl>
