@@ -88,6 +88,11 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             Debug.WriteLine("awaiting execute now");
             bool success = await _FileExplorer.execute(progress, currentItemProgress);
 
+            // Reset for the next iteration
+            ProgressValue = 0;
+            CurrentItemText = "Pending execution.";
+
+
             return success;
         }
 

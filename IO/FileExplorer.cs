@@ -89,19 +89,25 @@ namespace FolderMMYYSorter_2.IO
                     // Only update this property if the input 'value' is valid
                     _isUsingSQLDB = value;
                     OnPropertyChanged(nameof(isUsingSQLDB));
-                    if (_isUsingSQLDB)
-                    {
-                        Debug.WriteLine(_SqlHelper.GetDatabaseNames("localhost"));
-                    }
+                    generateSummary();
                 }
             }
         }
 
-
-        public bool isModeSorting { get; set; }
-        // as opposed to emptying mode
-
-        public bool isModeSubFolder { get; set; }
+        private bool _isModeSubFolder = false;
+        public bool isModeSubFolder
+        {
+            get { return _isModeSubFolder; }
+            set
+            {
+                if (_isModeSubFolder != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _isModeSubFolder = value;
+                    generateSummary();
+                }
+            }
+        }
 
         public List<DirFileModel> baseDirsList;
         public List<DirFileModel> subDirsList;
@@ -138,15 +144,33 @@ namespace FolderMMYYSorter_2.IO
             var destDir = Path.Combine(DestDirectory, FolderName);
             var _sum = "";
 
-            _sum += "Source:\n";
-            _sum += "Data to copy: ";
-            _sum += Double.Round(getSourceSize(),2) + " GB";
+            _sum += $"Source Directory: {CurrentDirectory}\n";
+            _sum += $"Data to copy: {Double.Round(getSourceSize(),2)} GB";
 
             _sum += "\n\n";
-            _sum += "Output Directory:\n";
-            _sum += destDir;
+            _sum += "Mode: ";
+            _sum += isModeSubFolder 
+                ? "Sort sub directories" 
+                : "Sort this directory";
+
+            _sum += "\n\n";
+            _sum += $"Output Directory: {destDir}\n\n";
+
+            _sum += $"Using SQL Data: {isUsingSQLDB}";
 
             Summary = _sum;
+        }
+
+        public void Reset()
+        {
+            _CurrentDirectory = "Select a folder.";
+            _DestDirectory = "Select a folder.";
+            FolderName = "";
+            subDirsList = new List<DirFileModel>();
+            baseDirsList = new List<DirFileModel>();
+
+            // clear dispfiles
+            Win32.Application.Current.Dispatcher.Invoke(() => DispFiles.Clear());
         }
 
 
@@ -207,14 +231,34 @@ namespace FolderMMYYSorter_2.IO
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 // Dialog was accepted
-                CurrentDirectory = "Loading...."; // display loading while awaiting
-                OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
                 CurrentDirectory = openFoldDlg.SelectedPath;
+
+                await Task.Yield(); // allow UI update to show loading 
+                LoadingDispFiles();
+                await Task.Yield(); // allow UI update to show loading 
 
                 await UpdateDisplayedFilesAsync();
                 OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
                 
             }
+        }
+
+        private async void LoadingDispFiles()
+        {
+            Win32.Application.Current.Dispatcher.Invoke(() =>
+            {
+                DispFiles.Clear();
+
+                DispFiles.Add(new DirFileModel
+                {
+                    name = "loading...",
+                    CreationDate = (new DateTime {}),
+                    isFolder = false,
+                    Path = @"C:\Temp\",
+
+                });
+
+            });
         }
 
         public async void destFileDialog()
@@ -246,8 +290,6 @@ namespace FolderMMYYSorter_2.IO
         // that is also called by P2_options page
         public async Task UpdateDisplayedFilesAsync()
         {
-            if (isExecuting) return;
-            isExecuting = true;
 
             baseDirsList = new List<DirFileModel>();
             subDirsList = new List<DirFileModel>();
@@ -257,27 +299,13 @@ namespace FolderMMYYSorter_2.IO
 
             await Task.Run(() =>
             {
-                // 1. Process all files and folders in the chosen directory (top level)
+                // 1. Process top-level files/folders
                 var baseEntries = new DirectoryInfo(CurrentDirectory).EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
                 Parallel.ForEach(baseEntries, info =>
                 {
-                    baseBag.Add(new DirFileModel
+                    try
                     {
-                        name = info.Name,
-                        CreationDate = info.CreationTime,
-                        isFolder = info is DirectoryInfo,
-                        Path = info.FullName
-                    });
-                });
-
-                // 2. Process all files and folders one layer into each folder of the chosen directory
-                var subDirs = new DirectoryInfo(CurrentDirectory).EnumerateDirectories("*", SearchOption.TopDirectoryOnly);
-                Parallel.ForEach(subDirs, subDir =>
-                {
-                    var subEntries = subDir.EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
-                    foreach (var info in subEntries)
-                    {
-                        subBag.Add(new DirFileModel
+                        baseBag.Add(new DirFileModel
                         {
                             name = info.Name,
                             CreationDate = info.CreationTime,
@@ -285,13 +313,49 @@ namespace FolderMMYYSorter_2.IO
                             Path = info.FullName
                         });
                     }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Handle base directory access issues if needed
+                    }
+                });
+
+                // 2. Process subdirectories
+                var subDirs = new DirectoryInfo(CurrentDirectory).EnumerateDirectories("*", SearchOption.TopDirectoryOnly);
+                Parallel.ForEach(subDirs, subDir =>
+                {
+                    try
+                    {
+                        var subEntries = subDir.EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+                        foreach (var info in subEntries)
+                        {
+                            subBag.Add(new DirFileModel
+                            {
+                                name = info.Name,
+                                CreationDate = info.CreationTime,
+                                isFolder = info is DirectoryInfo,
+                                Path = info.FullName
+                            });
+                        }
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Show message box on UI thread
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            System.Windows.MessageBox.Show(
+                                $"Access denied to: {subDir.FullName}\n\nThis is usually caused by:\n- System-protected folders\n- Permission restrictions\n- Antivirus blocking",
+                                "Access Error",
+                                System.Windows.MessageBoxButton.OK,
+                                System.Windows.MessageBoxImage.Warning
+                            );
+                        });
+                    }
                 });
             });
 
+
             baseDirsList = baseBag.ToList();
             subDirsList = subBag.ToList();
-
-            isExecuting = false;
 
             generateSummary();
 
@@ -342,9 +406,11 @@ namespace FolderMMYYSorter_2.IO
 
         public async Task<bool> execute(IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
         {
+            if (isExecuting) return false;
+            isExecuting = true;
+
             // if isModeSubFolder then access from subDirsList
             // else access from baseDirsList
-
             List<DirFileModel> src = isModeSubFolder 
                                         ? subDirsList 
                                         : baseDirsList;
@@ -356,15 +422,21 @@ namespace FolderMMYYSorter_2.IO
             if (src == null || src.Count == 0) errors.Add("No items found in source directory");
             if (!Directory.Exists(DestDirectory)) errors.Add("Destination is invalid");
             if (FolderName == "") errors.Add("Fill in a folder name");
-            if (isUsingSQLDB && !_SqlHelper.hasSQLData()) errors.Add("no SQL data found");
+            if (isUsingSQLDB && !_SqlHelper.hasSQLData())
+            {
+                if (_SqlHelper.isGettingFileTypes) errors.Add("SQL data still loading, please wait");
+                else errors.Add("no SQL data found");
+            }
+                
 
             if (errors.Count > 0)
             {
                 MessageBox.Show(
-                    $"Missing requirements:\n\n{string.Join("\n• ", errors)}",
+                    $"Missing requirements:\n\n• {string.Join("\n• ", errors)}",
                     "Action Cannot Proceed",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Exclamation);
+                isExecuting = false;
                 return false;
             }
 
@@ -392,23 +464,6 @@ namespace FolderMMYYSorter_2.IO
                         var fileType = isUsingSQLDB 
                                         ? _SqlHelper.filetypeOf(file.name) 
                                         : ""; // "" safe for Path.Combine
-
-                        // remove after debug
-                        switch (fileType)
-                        {
-                            case "IC":
-                                IC += 1;
-                                break;
-                            case "Gov":
-                                Gov += 1;
-                                break;
-                            case "Unknown":
-                                Unknown += 1;
-                                break;
-                            default:
-                                break;
-                        }
-                        // remove after debug
 
 
                         var targetDir = Path.Combine(dst, fileType, yyMM);
@@ -441,16 +496,13 @@ namespace FolderMMYYSorter_2.IO
                 });
             });
 
+            isExecuting = false;
+
             // Handle any exceptions
             if (!exceptions.IsEmpty)
             {
                 throw new AggregateException(exceptions);
             }
-
-            Debug.WriteLine("Total Files copied");
-            Debug.WriteLine("IC: " + IC);
-            Debug.WriteLine("Gov: " + Gov);
-            Debug.WriteLine("Unknown: " + Unknown);
 
             return true;
         }

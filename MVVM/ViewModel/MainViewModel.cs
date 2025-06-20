@@ -57,15 +57,14 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             CurrentPage = _pages[_currentIndex];
 
             NextCommand = new RelayCommand(
-                o => GoNext(), 
-                o => _currentIndex < _pages.Count - 1);
-            BackCommand = new RelayCommand(o => GoBack(), o => _currentIndex > 0);
+                o => GoNext());
+            BackCommand = new RelayCommand(o => GoBack(), o => _currentIndex > 0 && _currentIndex != (_pages.Count-1));
             CancelCommand = new RelayCommand(o => Cancel());
 
         }
         private async Task GoNext()
         {
-            if (_currentIndex < _pages.Count - 1)
+            if (_currentIndex < _pages.Count - 1) // not at the last page
             {
                 bool result;
                 if (CurrentPage.GetType() == typeof(P4_summary_VM))
@@ -86,6 +85,12 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
                     _currentIndex++;
                     CurrentPage = _pages[_currentIndex];
                 }
+            } 
+            else // when at the last page
+            {
+                _FileExplorer.Reset();
+                _currentIndex = 0;
+                CurrentPage = _pages[_currentIndex];
             }
 
         }

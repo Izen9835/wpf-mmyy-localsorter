@@ -90,9 +90,13 @@ namespace FolderMMYYSorter_2.IO
             return databaseNames;
         }
 
+        public bool isGettingFileTypes = false;
+
 
         public async void GetFileTypes()
         {
+            isGettingFileTypes = true;
+
             string connectionString =
                 $"Server='localhost';" +
                 $"Database={DBName};" +
@@ -125,7 +129,7 @@ namespace FolderMMYYSorter_2.IO
                             while (dr.Read())
                             {
                                 rawIC.Add(dr.GetString(0));
-        }
+                            }
                         }
 
                         IC_List = new HashSet<string>(
@@ -160,10 +164,13 @@ namespace FolderMMYYSorter_2.IO
                 Debug.WriteLine("SQL DB read success.");
             });
 
+            isGettingFileTypes = false;
+
         }
 
         public bool hasSQLData()
         {
+            if (IC_List == null || Gov_List == null) return false;
             return (IC_List.Count != 0 && Gov_List.Count != 0);
         }
 
