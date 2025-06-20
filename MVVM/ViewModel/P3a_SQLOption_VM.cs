@@ -13,6 +13,6 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
         {
             Title = "Use SQL DB Data";
             Instructions = "Toggle further sorting based on SQL DB data";
-        }
+        }   
     }
 }

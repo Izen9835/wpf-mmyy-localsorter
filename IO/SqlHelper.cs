@@ -15,26 +15,23 @@ namespace FolderMMYYSorter_2.IO
 {
     class SqlHelper : INotifyPropertyChanged
     {
-        public ObservableCollection<string> DatabaseNames { get; set; }
+        private HashSet<string> IC_List;
+        private HashSet<string> Gov_List;
 
-        private string _DBName = "";
-        public string DBName
+        private string _ConnectionString = "";
+        public string ConnectionString
         {
-            get { return _DBName; }
+            get { return _ConnectionString; }
             set
             {
-                if (_DBName != value)
+                if (_ConnectionString != value)
                 {
-                    _DBName = value;
+                    _ConnectionString = value;
+                    OnPropertyChanged(nameof(ConnectionString));
                     GetFileTypes();
                 }
             }
         }
-
-        private HashSet<string> IC_List;
-        private HashSet<string> Gov_List;
-
-
 
 
         // event handler to reflect changes in ViewModel to UI
@@ -46,48 +43,7 @@ namespace FolderMMYYSorter_2.IO
 
         public SqlHelper()
         {
-            DatabaseNames = new ObservableCollection<string>();
-            GetDatabaseNames("localhost");
-        }
 
-
-        public List<string> GetDatabaseNames(string serverName)
-        {
-            var databaseNames = new List<string>();
-            // Connect to the master database
-            string connectionString =
-                $"Server={serverName};" +
-                $"Database=master;" +
-                $"Integrated Security=True;" +
-                $"Encrypt=True;" +
-                $"TrustServerCertificate=True;";
-
-            using (SqlConnection con = new SqlConnection(connectionString))
-            {
-                con.Open();
-                using (SqlCommand cmd = new SqlCommand("SELECT name FROM sys.databases", con))
-                using (SqlDataReader dr = cmd.ExecuteReader())
-                {
-                    while (dr.Read())
-                    {
-                        databaseNames.Add(dr.GetString(0));
-                    }
-                }
-            }
-
-            // update UI
-            Win32.Application.Current.Dispatcher.Invoke(() =>
-            {
-                DatabaseNames.Clear();
-
-                foreach (var item in databaseNames)
-                {
-                    Debug.WriteLine(item);
-                    DatabaseNames.Add(item);
-                }
-            });
-
-            return databaseNames;
         }
 
         public bool isGettingFileTypes = false;
@@ -97,12 +53,12 @@ namespace FolderMMYYSorter_2.IO
         {
             isGettingFileTypes = true;
 
-            string connectionString =
-                $"Server='localhost';" +
-                $"Database={DBName};" +
-                $"Integrated Security=True;" +
-                $"Encrypt=True;" +
-                $"TrustServerCertificate=True;";
+            //string connectionString =
+            //    $"Server='localhost';" +
+            //    $"Database={DBName};" +
+            //    $"Integrated Security=True;" +
+            //    $"Encrypt=True;" +
+            //    $"TrustServerCertificate=True;";
 
             string sqlStatementIC = "CompReg_GetIC";
 
@@ -114,7 +70,7 @@ namespace FolderMMYYSorter_2.IO
                 try
                 {
 
-                    using (SqlConnection con = new SqlConnection(connectionString))
+                    using (SqlConnection con = new SqlConnection(ConnectionString))
                     {
                         con.Open();
 

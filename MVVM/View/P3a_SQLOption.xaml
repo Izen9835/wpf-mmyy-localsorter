@@ -7,15 +7,19 @@
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <StackPanel Orientation="Vertical" Margin="50,50,0,0" HorizontalAlignment="Left">
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
             <CheckBox Content="use database data" IsChecked="{Binding _FileExplorer.isUsingSQLDB}"/>
-            <ComboBox ItemsSource="{Binding _FileExplorer._SqlHelper.DatabaseNames}"
-                      SelectedItem="{Binding _FileExplorer._SqlHelper.DBName}"
-                      Margin="0,20,0,0"
-                      IsEnabled="{Binding _FileExplorer.isUsingSQLDB}"
-                      Width="200"
-                      Height="25"/>
-
+            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Center"
+                        Margin="0,20,0,0"
+                        IsEnabled="{Binding _FileExplorer.isUsingSQLDB}">
+                <TextBlock Text="ConnectionString" />
+                <TextBox Text="{Binding _FileExplorer._SqlHelper.ConnectionString, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Height="18"
+                         Width="400"
+                         Margin="10,0,0,0"/>
+            </StackPanel>
         </StackPanel>
 
     </Grid>

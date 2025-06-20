@@ -89,6 +89,7 @@ namespace FolderMMYYSorter_2.IO
                     // Only update this property if the input 'value' is valid
                     _isUsingSQLDB = value;
                     OnPropertyChanged(nameof(isUsingSQLDB));
+                    if (_isUsingSQLDB == false) _SqlHelper.ConnectionString = "";
                     generateSummary();
                 }
             }
@@ -168,6 +169,12 @@ namespace FolderMMYYSorter_2.IO
             FolderName = "";
             subDirsList = new List<DirFileModel>();
             baseDirsList = new List<DirFileModel>();
+
+            _SqlHelper.ConnectionString = "";
+            isUsingSQLDB = false;
+            isModeSubFolder = false;
+
+            OnPropertyChanged("");
 
             // clear dispfiles
             Win32.Application.Current.Dispatcher.Invoke(() => DispFiles.Clear());
