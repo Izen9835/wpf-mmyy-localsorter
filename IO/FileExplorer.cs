@@ -195,8 +195,17 @@ namespace FolderMMYYSorter_2.IO
             if (src == null || src.Count == 0) return 0;
 
             foreach (var item in src){
-                if (item.isFolder) output += DirSize(new DirectoryInfo(item.Path));
-                else output += new FileInfo(item.Path).Length;
+                try
+                {
+                    if (item.isFolder) output += DirSize(new DirectoryInfo(item.Path));
+                    else output += new FileInfo(item.Path).Length;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("getSourceSize error:" + ex);
+                    break;
+                }
+
             }
 
             return output/1000000000.0;
@@ -240,9 +249,9 @@ namespace FolderMMYYSorter_2.IO
                 // Dialog was accepted
                 CurrentDirectory = openFoldDlg.SelectedPath;
 
-                await Task.Yield(); // allow UI update to show loading 
                 LoadingDispFiles();
                 await Task.Yield(); // allow UI update to show loading 
+                await Task.Delay(1);
 
                 await UpdateDisplayedFilesAsync();
                 OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
@@ -304,6 +313,9 @@ namespace FolderMMYYSorter_2.IO
             var baseBag = new ConcurrentBag<DirFileModel>();
             var subBag = new ConcurrentBag<DirFileModel>();
 
+            bool gotError = false;
+
+
             await Task.Run(() =>
             {
                 // 1. Process top-level files/folders
@@ -346,6 +358,7 @@ namespace FolderMMYYSorter_2.IO
                     }
                     catch (UnauthorizedAccessException)
                     {
+                        gotError = true;
                         // Show message box on UI thread
                         System.Windows.Application.Current.Dispatcher.Invoke(() =>
                         {
@@ -360,6 +373,12 @@ namespace FolderMMYYSorter_2.IO
                 });
             });
 
+            if (gotError)
+            {
+                _CurrentDirectory = "Select a folder.";
+                //OnPropertyChanged(nameof(CurrentDirectory));
+                return;
+            }
 
             baseDirsList = baseBag.ToList();
             subDirsList = subBag.ToList();

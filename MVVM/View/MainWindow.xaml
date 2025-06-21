@@ -33,7 +33,7 @@
         </Border>
 
         <!--Middle Row: Dynamical Content Area (Both title and function are rendered here)-->
-        <ContentControl Grid.Row="1" Margin="20" Content="{Binding CurrentPage}" Background="Wheat"/>
+        <ContentControl Grid.Row="1" Margin="20" Content="{Binding CurrentPage}" Background="Bisque"/>
 
         <!--Bottom Row: Navigation buttons-->
         <StackPanel Grid.Row="2" 
