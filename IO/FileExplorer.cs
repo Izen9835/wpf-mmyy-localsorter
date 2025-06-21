@@ -1,5 +1,6 @@
 ﻿using FolderMMYYSorter_2.MVVM.Model;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -24,39 +25,99 @@ namespace FolderMMYYSorter_2.IO
             get { return _CurrentDirectory; }
             set
             {
-                if (_CurrentDirectory != value)
+                if (Directory.Exists(value) && (_CurrentDirectory != value))
                 {
+                    // Only update this property if the input 'value' is valid
                     _CurrentDirectory = value;
                 }
             }
         }
 
-        private string _HelpText = "Select a folder above.";
-        public string HelpText
+        private string _Summary = "placeholder summary";
+        public string Summary
         {
-            get { return _HelpText; }
+            get { return _Summary; }
             set
             {
-                if (_HelpText != value)
+                if (_Summary != value)
                 {
-                    _HelpText = value;
-                    OnPropertyChanged(nameof(HelpText)); // triggers the UI update
-                    CommandManager.InvalidateRequerySuggested(); // Force command refresh
+                    // Only update this property if the input 'value' is valid
+                    _Summary = value;
+                }
+            }
+        }
 
+        private string _FolderName = "";
+        public string FolderName
+        {
+            get { return _FolderName; }
+            set
+            {
+                if (_FolderName != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _FolderName = value;
+                    generateSummary();
                 }
             }
         }
 
 
-        public bool isModeSorting { get; set; }
-        // as opposed to emptying mode
+        private string _DestDirectory = "Select a folder.";
+        public string DestDirectory
+        {
+            get { return _DestDirectory; }
+            set
+            {
+                if (Directory.Exists(value) && (_DestDirectory != value))
+                {
+                    // Only update this property if the input 'value' is valid
+                    _DestDirectory = value;
+                    generateSummary();
+                }
+            }
+        }
 
-        public List<DirFileModel> filesList;
-        public List<DirFileModel> dirsList;
+        private bool _isUsingSQLDB = false;
+        public bool isUsingSQLDB
+        {
+            get { return _isUsingSQLDB; }
+            set
+            {
+                if (_isUsingSQLDB != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _isUsingSQLDB = value;
+                    OnPropertyChanged(nameof(isUsingSQLDB));
+                    if (_isUsingSQLDB == false) _SqlHelper.ConnectionString = "";
+                    generateSummary();
+                }
+            }
+        }
+
+        private bool _isModeSubFolder = false;
+        public bool isModeSubFolder
+        {
+            get { return _isModeSubFolder; }
+            set
+            {
+                if (_isModeSubFolder != value)
+                {
+                    // Only update this property if the input 'value' is valid
+                    _isModeSubFolder = value;
+                    generateSummary();
+                }
+            }
+        }
+
+        public List<DirFileModel> baseDirsList;
+        public List<DirFileModel> subDirsList;
+
+        public bool isExecuting = false;
+
 
         public ObservableCollection<DirFileModel> DispFiles { get; set; }
 
-        private IEnumerable<IGrouping<string, DirFileModel>> mmYYGroups;
 
         // event handler to clear message bar when send message
         public event PropertyChangedEventHandler PropertyChanged;
@@ -65,6 +126,8 @@ namespace FolderMMYYSorter_2.IO
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
+        public SqlHelper _SqlHelper { get; set; }
+
 
 
         public FileExplorer()
@@ -72,6 +135,98 @@ namespace FolderMMYYSorter_2.IO
             OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
 
             DispFiles = new ObservableCollection<DirFileModel>();
+
+            _SqlHelper = new SqlHelper();
+        }
+
+
+        public void generateSummary()
+        {
+            var destDir = Path.Combine(DestDirectory, FolderName);
+            var _sum = "";
+
+            _sum += $"Source Directory: {CurrentDirectory}\n";
+            _sum += $"Data to copy: {Double.Round(getSourceSize(),2)} GB";
+
+            _sum += "\n\n";
+            _sum += "Mode: ";
+            _sum += isModeSubFolder 
+                ? "Sort sub directories" 
+                : "Sort this directory";
+
+            _sum += "\n\n";
+            _sum += $"Output Directory: {destDir}\n\n";
+
+            _sum += $"Using SQL Data: {isUsingSQLDB}";
+
+            Summary = _sum;
+        }
+
+        public void Reset()
+        {
+            _CurrentDirectory = "Select a folder.";
+            _DestDirectory = "Select a folder.";
+            FolderName = "";
+            subDirsList = new List<DirFileModel>();
+            baseDirsList = new List<DirFileModel>();
+
+            _SqlHelper.ConnectionString = "";
+            isUsingSQLDB = false;
+            isModeSubFolder = false;
+
+            OnPropertyChanged("");
+
+            // clear dispfiles
+            Win32.Application.Current.Dispatcher.Invoke(() => DispFiles.Clear());
+        }
+
+
+        private double getSourceSize()
+        {
+            List<DirFileModel> src = [];
+            if (isModeSubFolder)
+                src = subDirsList;
+            else
+                src = baseDirsList;
+
+            double output = 0;
+
+            // src is empty
+            if (src == null || src.Count == 0) return 0;
+
+            foreach (var item in src){
+                try
+                {
+                    if (item.isFolder) output += DirSize(new DirectoryInfo(item.Path));
+                    else output += new FileInfo(item.Path).Length;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("getSourceSize error:" + ex);
+                    break;
+                }
+
+            }
+
+            return output/1000000000.0;
+        }
+
+        public static long DirSize(DirectoryInfo d)
+        {
+            long size = 0;
+            // Add file sizes.
+            FileInfo[] fis = d.GetFiles();
+            foreach (FileInfo fi in fis)
+            {
+                size += fi.Length;
+            }
+            // Add subdirectory sizes.
+            DirectoryInfo[] dis = d.GetDirectories();
+            foreach (DirectoryInfo di in dis)
+            {
+                size += DirSize(di);
+            }
+            return size;
         }
 
 
@@ -92,159 +247,326 @@ namespace FolderMMYYSorter_2.IO
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 // Dialog was accepted
-                CurrentDirectory = "Loading...."; // display loading while awaiting
-                OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
                 CurrentDirectory = openFoldDlg.SelectedPath;
 
-                await updateDisplayedFiles();
+                LoadingDispFiles();
+                await Task.Yield(); // allow UI update to show loading 
+                await Task.Delay(1);
+
+                await UpdateDisplayedFilesAsync();
                 OnPropertyChanged(nameof(CurrentDirectory)); // triggers the UI update
-                HelpText = "Select a mode.";
                 
             }
         }
 
-        private async Task updateDisplayedFiles()
+        private async void LoadingDispFiles()
         {
-            // list directories first
-            string[] dirs = await Task.Run(() => Directory.GetDirectories(CurrentDirectory));
-            dirsList = await Task.Run(() => dirs.Select(
-                dirPath => new DirFileModel
-            {
-                name = System.IO.Path.GetFileName(dirPath),
-                CreationDate = new FileInfo(dirPath).LastWriteTime,
-                isFolder = true,
-                Path = dirPath,
-            }).ToList());
-
-
-            // list files next
-            string[] files = await Task.Run(() => Directory.GetFiles(CurrentDirectory));
-            filesList = await Task.Run(() => files.Select( // considering using EnumerateFiles EnumerateDirectories instead
-                filePath => new DirFileModel
-                {
-                    name = System.IO.Path.GetFileName(filePath),
-                    CreationDate = new FileInfo(filePath).LastWriteTime,
-                    isFolder = false,
-                    Path = filePath,
-                }).ToList());
-
-
-            // do as a batch to save resources
-            // display all directories and files
             Win32.Application.Current.Dispatcher.Invoke(() =>
             {
                 DispFiles.Clear();
 
-                foreach (var dir in dirsList)
-                    DispFiles.Add(dir);
+                DispFiles.Add(new DirFileModel
+                {
+                    name = "loading...",
+                    CreationDate = (new DateTime {}),
+                    isFolder = false,
+                    Path = @"C:\Temp\",
 
-                foreach (var file in filesList)
-                    DispFiles.Add(file);
+                });
+
+            });
+        }
+
+        public async void destFileDialog()
+        {
+            FolderBrowserDialog openFoldDlg = new FolderBrowserDialog();
+
+            openFoldDlg.InitialDirectory = @"C:\Temp\";
+
+            openFoldDlg.Description =
+                "Select the output directory";
+
+            openFoldDlg.ShowNewFolderButton = true;
+
+            // Show dialog and check result
+            System.Windows.Forms.DialogResult result = openFoldDlg.ShowDialog();
+            if (result == System.Windows.Forms.DialogResult.OK)
+            {
+                // Dialog was accepted
+                DestDirectory = openFoldDlg.SelectedPath;
+                OnPropertyChanged(nameof(DestDirectory)); // triggers the UI update
+
+            }
+        }
+
+        /* TODO: rename restructure this code */
+        // function is named update displayed files
+        // but main function is to read CurrentDir
+        // updating the DispFiles could be a separate function 
+        // that is also called by P2_options page
+        public async Task UpdateDisplayedFilesAsync()
+        {
+
+            baseDirsList = new List<DirFileModel>();
+            subDirsList = new List<DirFileModel>();
+
+            var baseBag = new ConcurrentBag<DirFileModel>();
+            var subBag = new ConcurrentBag<DirFileModel>();
+
+            bool gotError = false;
+
+
+            await Task.Run(() =>
+            {
+                // 1. Process top-level files/folders
+                var baseEntries = new DirectoryInfo(CurrentDirectory).EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+                Parallel.ForEach(baseEntries, info =>
+                {
+                    try
+                    {
+                        baseBag.Add(new DirFileModel
+                        {
+                            name = info.Name,
+                            CreationDate = info.CreationTime,
+                            isFolder = info is DirectoryInfo,
+                            Path = info.FullName
+                        });
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Handle base directory access issues if needed
+                    }
+                });
+
+                // 2. Process subdirectories
+                var subDirs = new DirectoryInfo(CurrentDirectory).EnumerateDirectories("*", SearchOption.TopDirectoryOnly);
+                Parallel.ForEach(subDirs, subDir =>
+                {
+                    try
+                    {
+                        var subEntries = subDir.EnumerateFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+                        foreach (var info in subEntries)
+                        {
+                            subBag.Add(new DirFileModel
+                            {
+                                name = info.Name,
+                                CreationDate = info.CreationTime,
+                                isFolder = info is DirectoryInfo,
+                                Path = info.FullName
+                            });
+                        }
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        gotError = true;
+                        // Show message box on UI thread
+                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            System.Windows.MessageBox.Show(
+                                $"Access denied to: {subDir.FullName}\n\nThis is usually caused by:\n- System-protected folders\n- Permission restrictions\n- Antivirus blocking",
+                                "Access Error",
+                                System.Windows.MessageBoxButton.OK,
+                                System.Windows.MessageBoxImage.Warning
+                            );
+                        });
+                    }
+                });
             });
 
-            // clear after use to save resources
-            dirsList.Clear();
-            filesList.Clear();
+            if (gotError)
+            {
+                _CurrentDirectory = "Select a folder.";
+                //OnPropertyChanged(nameof(CurrentDirectory));
+                return;
+            }
 
+            baseDirsList = baseBag.ToList();
+            subDirsList = subBag.ToList();
+
+            generateSummary();
+
+            // Update UI
+            Win32.Application.Current.Dispatcher.Invoke(() =>
+            {
+                DispFiles.Clear();
+
+                foreach (var item in baseDirsList)
+                {
+                    DispFiles.Add(item);
+                }
+            });
         }
 
-        public void updateMode(bool input)
+        public bool isCurrDirValid()
         {
-            isModeSorting = input;
-            Task.Run(() => updateHelpText());
+            return Directory.Exists(CurrentDirectory);
         }
 
-        private bool IsValidMMYYFolder(string folderName)
+        public void updateIsSubFolder(bool input)
         {
-            if (folderName.Length != 4 || !folderName.All(char.IsDigit))
+            isModeSubFolder = input;
+
+            if (subDirsList == null && baseDirsList == null) return;
+
+            if (isModeSubFolder)
+            {
+                Win32.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    DispFiles.Clear();
+
+                    foreach (var dir in subDirsList)
+                        DispFiles.Add(dir);
+                });
+            } else
+            {
+                Win32.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    DispFiles.Clear();
+
+                    foreach (var dir in baseDirsList)
+                        DispFiles.Add(dir);
+                });
+            }
+        }
+
+
+        public async Task<bool> execute(IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
+        {
+            if (isExecuting) return false;
+            isExecuting = true;
+
+            // if isModeSubFolder then access from subDirsList
+            // else access from baseDirsList
+            List<DirFileModel> src = isModeSubFolder 
+                                        ? subDirsList 
+                                        : baseDirsList;
+
+            var dst = Path.Combine(DestDirectory, FolderName);
+
+            List<string> errors = [];
+
+            if (src == null || src.Count == 0) errors.Add("No items found in source directory");
+            if (!Directory.Exists(DestDirectory)) errors.Add("Destination is invalid");
+            if (FolderName == "") errors.Add("Fill in a folder name");
+            if (isUsingSQLDB && !_SqlHelper.hasSQLData())
+            {
+                if (_SqlHelper.isGettingFileTypes) errors.Add("SQL data still loading, please wait");
+                else errors.Add("no SQL data found");
+            }
+                
+
+            if (errors.Count > 0)
+            {
+                MessageBox.Show(
+                    $"Missing requirements:\n\n• {string.Join("\n• ", errors)}",
+                    "Action Cannot Proceed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Exclamation);
+                isExecuting = false;
                 return false;
-            int month = int.Parse(folderName.Substring(0, 2));
-            int year = int.Parse(folderName.Substring(2, 2));
-            return month >= 1 && month <= 12 && year >= 0 && year <= 99;
-        }
-
-        private int GetDirectoryItemCount(string path)
-        {
-            try { return Directory.GetFileSystemEntries(path).Length; }
-            catch { return 0; }
-        }
-
-        private async Task updateHelpText()
-        {
-            HelpText = "Loading....";
-            switch (isModeSorting)
-            {
-                case true: // Sorting
-                    mmYYGroups = await Task.Run(
-                        () => DispFiles
-                                .Where(f => !IsValidMMYYFolder(f.name)) // do not sort files that are in MMYY format
-                                .GroupBy(f => f.CreationDate.ToString("MMyy"))
-                                .ToList()
-                                );
-                    HelpText = $"Sort above {DispFiles.Count} files into {mmYYGroups.Count()} folders. \nMMYY files are ignored. \nPress Execute."; // how many files there are, how many folders they will be sorted into
-                    break;
-
-
-                case false: // Emptying
-                    int mmYYFolderCount = 0;
-                    int totalItemsInMMYYFolders = 0;
-
-                    await Task.Run(() =>
-                    {
-                        foreach (var dir in DispFiles.Where(d => d.isFolder && IsValidMMYYFolder(d.name)))
-                        {
-                            mmYYFolderCount++;
-                            totalItemsInMMYYFolders += GetDirectoryItemCount(dir.Path);
-                        }
-                    });
-
-                    HelpText = $"Emptying out {mmYYFolderCount} folders that contain a total of {totalItemsInMMYYFolders} items."; // how many folders there are. (how many items inside all total?)
-                    break;
             }
 
-            Win32.Application.Current.Dispatcher.Invoke(() => CommandManager.InvalidateRequerySuggested());
 
-        }
 
-        public async Task execute()
-        {
-            HelpText = "Processing....";
-            switch (isModeSorting)
+            // for progress bar
+            int totalItems = src.Count;
+            int processedItems = 0;
+
+            var exceptions = new ConcurrentBag<Exception>();
+
+            int Gov = 0; int IC = 0; int Unknown = 0;
+
+
+            // Process in parallel
+            await Task.Run(() =>
             {
-                case true: // Sorting
-                    foreach (var group in mmYYGroups)
+                Parallel.ForEach(src, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
+                {
+                    try
                     {
-                        string mmYY = group.Key;
-                        string targetDir = Path.Combine(CurrentDirectory, mmYY);
+                        var yyMM = file.CreationDate.ToString("yyMM");
+
+                        // get fileType from Sql server data
+                        var fileType = isUsingSQLDB 
+                                        ? _SqlHelper.filetypeOf(file.name) 
+                                        : ""; // "" safe for Path.Combine
+
+
+                        var targetDir = Path.Combine(dst, fileType, yyMM);
+
+                        // Ensure the directory exists (safe to call repeatedly)
                         Directory.CreateDirectory(targetDir);
-                        foreach (var file in group)
-                        {
-                            string targetPath = Path.Combine(targetDir, Path.GetFileName(file.Path));
-                            if (file.isFolder)
-                                Directory.Move(file.Path, targetPath);
-                            else
-                                File.Move(file.Path, targetPath); // file already exists causes issues
-                        }
-                    }
-                    break;
 
-                case false: // Emptying
-                    foreach (var dir in DispFiles.Where(d => d.isFolder && IsValidMMYYFolder(d.name)))
-                    {
-                        foreach (var item in Directory.GetFileSystemEntries(dir.Path))
+                        string targetPath = Path.Combine(targetDir, file.name);
+
+                        if (file.isFolder)
+                            CopyDirectory(file.Path, targetPath, true);
+                        else
+                            File.Copy(file.Path, targetPath, overwrite: true);
+
+                        // update UI periodically (not with every object)
+                        // otherwise UI will simply seize
+                        int reportFrequency = 10;
+                        int newCount = Interlocked.Increment(ref processedItems);
+                        if (newCount % reportFrequency == 0 || newCount == totalItems)
                         {
-                            var targetDir = Path.Combine(CurrentDirectory, Path.GetFileName(item));
-                            if (File.Exists(item))
-                                File.Move(item, targetDir);
-                            else if (Directory.Exists(item))
-                                Directory.Move(item, targetDir);
+                            ProgressValue?.Report((newCount * 100) / totalItems);
+                            CurrentItem?.Report(file.name);
                         }
-                        Directory.Delete(dir.Path, recursive: true); // perms might fail
+
                     }
-                    break;
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
+                });
+            });
+
+            isExecuting = false;
+
+            // Handle any exceptions
+            if (!exceptions.IsEmpty)
+            {
+                throw new AggregateException(exceptions);
             }
-            await updateDisplayedFiles();
-            HelpText = "Executed Successfully.";
+
+            return true;
+        }
+
+
+        // copied from C# .NET documentation
+        // https://learn.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
+        static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+        {
+            // Get information about the source directory
+            var dir = new DirectoryInfo(sourceDir);
+
+            // Check if the source directory exists
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+            // Cache directories before we start copying
+            DirectoryInfo[] dirs = dir.GetDirectories();
+
+            // Create the destination directory
+            Directory.CreateDirectory(destinationDir);
+
+            // Get the files in the source directory and copy to the destination directory
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath, overwrite:true);
+            }
+
+            // If recursive and copying subdirectories, recursively call this method
+            if (recursive)
+            {
+                foreach (DirectoryInfo subDir in dirs)
+                {
+                    string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                    CopyDirectory(subDir.FullName, newDestinationDir, true);
+                }
+            }
         }
     }
 }

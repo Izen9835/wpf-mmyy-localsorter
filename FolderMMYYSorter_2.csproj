@@ -7,11 +7,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>True</UseWindowsForms>
+    <ApplicationIcon>Gemini_Generated_Image_2ahl3y2ahl3y2ahl.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Resource\fileicon.png" />
     <None Remove="Resource\foldericon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Gemini_Generated_Image_2ahl3y2ahl3y2ahl.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>
