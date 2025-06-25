@@ -61,7 +61,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 
         }
 
-        public async Task<bool> Execute_w_Prog_Bar()
+        public async Task<bool> Execute_w_Prog_Bar(CancellationTokenSource _cts)
         {
             if (_FileExplorer.isExecuting == true)
             {
@@ -86,7 +86,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             });
 
             Debug.WriteLine("awaiting execute now");
-            bool success = await _FileExplorer.execute(progress, currentItemProgress);
+            bool success = await _FileExplorer.execute(_cts, progress, currentItemProgress);
 
             // Reset for the next iteration
             ProgressValue = 0;

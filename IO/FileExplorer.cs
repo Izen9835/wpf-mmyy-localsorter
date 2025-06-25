@@ -33,7 +33,7 @@ namespace FolderMMYYSorter_2.IO
             }
         }
 
-        private string _Summary = "placeholder summary";
+        private string _Summary = "";
         public string Summary
         {
             get { return _Summary; }
@@ -128,6 +128,8 @@ namespace FolderMMYYSorter_2.IO
 
         public SqlHelper _SqlHelper { get; set; }
 
+        public event Action resetEvent;
+
 
 
         public FileExplorer()
@@ -142,11 +144,17 @@ namespace FolderMMYYSorter_2.IO
 
         public void generateSummary()
         {
+            //var count = (isModeSubFolder
+            //                ? subDirsList
+            //                : baseDirsList)?.Count;
+            var count = DispFiles.Count;
+
             var destDir = Path.Combine(DestDirectory, FolderName);
             var _sum = "";
 
             _sum += $"Source Directory: {CurrentDirectory}\n";
             _sum += $"Data to copy: {Double.Round(getSourceSize(),2)} GB";
+            _sum += $" ({count} items)";
 
             _sum += "\n\n";
             _sum += "Mode: ";
@@ -175,6 +183,9 @@ namespace FolderMMYYSorter_2.IO
             isModeSubFolder = false;
 
             OnPropertyChanged("");
+            resetEvent?.Invoke();
+
+            isExecuting = false;
 
             // clear dispfiles
             Win32.Application.Current.Dispatcher.Invoke(() => DispFiles.Clear());
@@ -383,17 +394,21 @@ namespace FolderMMYYSorter_2.IO
             baseDirsList = baseBag.ToList();
             subDirsList = subBag.ToList();
 
-            generateSummary();
-
             // Update UI
             Win32.Application.Current.Dispatcher.Invoke(() =>
             {
                 DispFiles.Clear();
 
-                foreach (var item in baseDirsList)
+                var tempsrc = isModeSubFolder 
+                                ? subDirsList 
+                                : baseDirsList;
+
+                foreach (var item in tempsrc)
                 {
                     DispFiles.Add(item);
                 }
+
+                generateSummary();
             });
         }
 
@@ -416,6 +431,8 @@ namespace FolderMMYYSorter_2.IO
 
                     foreach (var dir in subDirsList)
                         DispFiles.Add(dir);
+
+                    generateSummary();
                 });
             } else
             {
@@ -425,12 +442,14 @@ namespace FolderMMYYSorter_2.IO
 
                     foreach (var dir in baseDirsList)
                         DispFiles.Add(dir);
+
+                    generateSummary();
                 });
             }
         }
 
 
-        public async Task<bool> execute(IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
+        public async Task<bool> execute(CancellationTokenSource _cts, IProgress<int> ProgressValue = null, IProgress<string> CurrentItem = null)
         {
             if (isExecuting) return false;
             isExecuting = true;
@@ -474,55 +493,70 @@ namespace FolderMMYYSorter_2.IO
 
             var exceptions = new ConcurrentBag<Exception>();
 
-            int Gov = 0; int IC = 0; int Unknown = 0;
-
-
             // Process in parallel
             await Task.Run(() =>
             {
-                Parallel.ForEach(src, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, file =>
+                try
                 {
-                    try
+                    Parallel.ForEach(src, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = _cts.Token }, file =>
                     {
-                        var yyMM = file.CreationDate.ToString("yyMM");
-
-                        // get fileType from Sql server data
-                        var fileType = isUsingSQLDB 
-                                        ? _SqlHelper.filetypeOf(file.name) 
-                                        : ""; // "" safe for Path.Combine
-
-
-                        var targetDir = Path.Combine(dst, fileType, yyMM);
-
-                        // Ensure the directory exists (safe to call repeatedly)
-                        Directory.CreateDirectory(targetDir);
-
-                        string targetPath = Path.Combine(targetDir, file.name);
-
-                        if (file.isFolder)
-                            CopyDirectory(file.Path, targetPath, true);
-                        else
-                            File.Copy(file.Path, targetPath, overwrite: true);
-
-                        // update UI periodically (not with every object)
-                        // otherwise UI will simply seize
-                        int reportFrequency = 10;
-                        int newCount = Interlocked.Increment(ref processedItems);
-                        if (newCount % reportFrequency == 0 || newCount == totalItems)
+                        try
                         {
-                            ProgressValue?.Report((newCount * 100) / totalItems);
-                            CurrentItem?.Report(file.name);
-                        }
+                            var yyMM = file.CreationDate.ToString("yyMM");
 
-                    }
-                    catch (Exception ex)
-                    {
-                        exceptions.Add(ex);
-                    }
-                });
-            });
+                            // get fileType from Sql server data
+                            var fileType = isUsingSQLDB
+                                            ? _SqlHelper.filetypeOf(file.name)
+                                            : ""; // "" safe for Path.Combine
+
+
+                            var targetDir = Path.Combine(dst, fileType, yyMM);
+
+                            // Ensure the directory exists (safe to call repeatedly)
+                            Directory.CreateDirectory(targetDir);
+
+                            string targetPath = Path.Combine(targetDir, file.name);
+
+                            if (file.isFolder)
+                                CopyDirectory(file.Path, targetPath, true);
+                            else
+                                File.Copy(file.Path, targetPath, overwrite: true);
+
+                            // update UI periodically (not with every object)
+                            // otherwise UI will simply seize
+                            int reportFrequency = 10;
+                            int newCount = Interlocked.Increment(ref processedItems);
+                            if (newCount % reportFrequency == 0 || newCount == totalItems)
+                            {
+                                ProgressValue?.Report((newCount * 100) / totalItems);
+                                CurrentItem?.Report(file.name);
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            exceptions.Add(ex);
+                        }
+                    });
+                }
+                catch (OperationCanceledException ex)
+                {
+                    MessageBox.Show(
+                        "Operation cancelled.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Exclamation);
+                    Reset();
+                }
+
+            }, _cts.Token); // so can cancel via cts
 
             isExecuting = false;
+
+            if (_cts.IsCancellationRequested)
+            {
+                return false;
+            }
 
             // Handle any exceptions
             if (!exceptions.IsEmpty)

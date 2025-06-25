@@ -66,6 +66,14 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 
             SelectedOption = "Sort Directory";
 
+            _FileExplorer.resetEvent += _FileExplorer_resetEvent; // for resetting UI properly when _FileExplorer resets.
+
+        }
+
+        private void _FileExplorer_resetEvent()
+        {
+            if (_FileExplorer.isModeSubFolder) SelectedOption = Options[1];
+            else SelectedOption = Options[0];
         }
     }
 }

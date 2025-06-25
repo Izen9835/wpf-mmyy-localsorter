@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
+using Win32 = System.Windows;
 
 namespace FolderMMYYSorter_2.MVVM.ViewModel
 {
@@ -27,7 +27,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             set { _currentPage = value; OnPropertyChanged(nameof(CurrentPage)); }
         }
 
-       
+        private CancellationTokenSource _cts;
 
         private readonly List<_baseviewmodel> _pages;
         private int _currentIndex;
@@ -61,6 +61,8 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             BackCommand = new RelayCommand(o => GoBack(), o => _currentIndex > 0 && _currentIndex != (_pages.Count-1));
             CancelCommand = new RelayCommand(o => Cancel());
 
+            _cts = new CancellationTokenSource();
+
         }
         private async Task GoNext()
         {
@@ -72,7 +74,7 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
                     // there must be a more elegant way...
                     // that allows this part of the code to be placed under P4's VM
                     var p4ViewModel = (P4_summary_VM)CurrentPage;
-                    result = await p4ViewModel.Execute_w_Prog_Bar();
+                    result = await p4ViewModel.Execute_w_Prog_Bar(_cts);
 
                     if (result)
                     {
@@ -88,11 +90,16 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
             } 
             else // when at the last page
             {
-                _FileExplorer.Reset();
-                _currentIndex = 0;
-                CurrentPage = _pages[_currentIndex];
+                Reset();
             }
 
+        }
+
+        private void Reset()
+        {
+            _FileExplorer.Reset();
+            _currentIndex = 0;
+            CurrentPage = _pages[_currentIndex];
         }
 
 
@@ -113,7 +120,23 @@ namespace FolderMMYYSorter_2.MVVM.ViewModel
 
         private void Cancel()
         {
-            // Handle cancel logic
+            // if isExecuting, then cancel that execution
+            // if not just close the program? or reset back to page 1
+            if (_FileExplorer.isExecuting)
+            {
+                _cts.Cancel();
+                Reset();
+                _cts.Dispose();
+                _cts = new CancellationTokenSource();
+            }
+            else if (_currentIndex == _pages.Count - 1) // last page
+            {
+                Win32.Application.Current.Shutdown();
+            } 
+            else
+            {
+                Reset();
+            }
         }
     }
 }
